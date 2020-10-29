@@ -111,7 +111,6 @@ void createTable(string fn){
     nHead = new node;
     nHead->id = -1;
 
-    //string fn = argv[1];
     fstream f;
     f.open(fn);
     while(!f.eof()){
