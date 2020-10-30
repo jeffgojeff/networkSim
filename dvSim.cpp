@@ -47,10 +47,14 @@ void createHead(int, int, int);
 void createNode(int, int, int);
 void createDV();
 void sendDV();
+void addMissingNodes(struct node*);
 void initialNeighborUpdate(int, int, int);
 void whatsInR();
 void whatsInS();
+void updateTables();
+void clearSend();
 bool findNode(int);
+int getCost(int, int);
 
 
 
@@ -58,13 +62,26 @@ int main(int argc, char *argv[]){
 
     string fn = argv[1];
     createTable(fn);
+
     createDV();
-    whatsInS();
     sendDV();
-    
-    whatsInR();
+    viewTopogrophy();
+    updateTables();
     viewTopogrophy();
 
+    cout << endl << "SECOND TRY" << endl;
+    createDV();
+    sendDV();
+    updateTables();
+    viewTopogrophy();
+    
+    /*
+    cout << endl << "THIRD TRY" << endl;
+    createDV();
+    sendDV();
+    updateTables();
+    viewTopogrophy();
+    */
     
     
 
@@ -95,7 +112,7 @@ void viewTopogrophy(){
             temp=temp->link;
         }
 
-/*
+
         packet* s = new packet;
         s=temp->send;
         while(s != NULL){
@@ -111,7 +128,7 @@ void viewTopogrophy(){
             r=r->next;
             
         }
-        */
+
 
 
         cout << "Node #" << temp->id<< endl;
@@ -249,9 +266,6 @@ void createDV(){
             tempPack->destNode = temp->neighbors.at(i);
             tempPack->next = NULL;
 
-            //cout << "srcNode: " << tempPack->srcNode << endl;
-            //cout << "destNode: " << tempPack->destNode << endl;
-
             for(int j=0; j<temp->cost.size(); j++){
                 tempPack->destination.push_back(temp->destination.at(j));
                 tempPack->cost.push_back(temp->cost.at(j));
@@ -272,10 +286,6 @@ void createDV(){
         temp = temp->link;
     }
 
-
-    
-    
-
 }
 
 
@@ -287,24 +297,21 @@ void sendDV(){
     while(temp != NULL){
 
         packet* sHead = temp->send;
-
         while(sHead != NULL){
             node* find = nHead;
 
             while(find->id != sHead->destNode){
                 find = find->link;
             }
-            //cout << "find->id" << find->id << endl;
-            //cout << "sHead->destNode" << sHead->destNode << endl;
+
             packet* s = new packet;
-            if(find->recieved == NULL && find->id == sHead->destNode){
+            if(find->recieved == NULL){
                 find->recieved = sHead;
                 sHead=sHead->next;
                 s = find->recieved;
                 s->next=NULL;
-                
             }
-            else if(find->recieved != NULL && find->id == sHead->destNode){
+            else{
                 
                 s = find->recieved;
 
@@ -318,12 +325,71 @@ void sendDV(){
             }
             packetRecieved++;
         }
+        temp->send=NULL;
         temp= temp->link;
+        
+    }
+}
+
+
+void updateTables(){
+    node* temp = nHead;
+    while(temp != NULL){
+
+        addMissingNodes(temp);
+
+        temp->recieved=NULL;
+        temp=temp->link;
+    }
+}
+
+
+void addMissingNodes(node *temp){
+    packet* sHead = temp->recieved;
+    //loop sent packets
+    while(sHead != NULL){
+        //loop through vectors in sent packets
+        for(int i=0; i<sHead->destination.size(); i++){
+            int tableSize=temp->destination.size();
+            //loop through the table
+            for(int j=0; j<tableSize; j++){
+                //if not found in the table
+                //and is not itself
+                //add it to the table
+                if(!(find(temp->destination.begin(), temp->destination.end(), sHead->destination.at(i)) != temp->destination.end()) && temp->id != sHead->destination.at(i)){
+                    temp->destination.push_back(sHead->destination.at(i));
+                    temp->cost.push_back(sHead->cost.at(i));
+                    temp->nextHop.push_back(sHead->srcNode);
+                }
+            }         
+        }
+        sHead = sHead->next;
+    }
+}
+
+
+int getCost(int nodeId, int destId){
+    node* temp = nHead;
+    int cost = 0;
+    while(temp->id != nodeId){
+        temp = temp->link;
     }
 
-     
+    for(int i=0; i<temp->destination.size(); i++){
+        cost=0;
+        if(temp->destination.at(i) == destId){
+            cost = temp->cost.at(i);
+            cout << "cost: " << cost << endl;
+            return cost;
+        }
+    }
+
+return cost;
 
 }
+
+
+
 
 void whatsInR(){
 
@@ -375,6 +441,29 @@ void whatsInS(){
         }
 
         temp=temp->link;
+    }
+
+}
+
+
+void clearSend(){
+    node* temp= nHead;
+    
+
+    while(temp != NULL){
+        packet* clear = temp->send;
+        packet* tempClear = new packet;
+
+        while(clear != NULL){
+            //cout << "not clear" << endl;
+        
+            tempClear = clear;
+            clear = clear->next;
+
+            delete tempClear;
+        }
+
+    temp = temp->link;
     }
 
 }
