@@ -8,15 +8,31 @@ using namespace std;
 ///data structures
 struct node{
 
-        int id;
+    int id;
 
-        vector <int> destination;
-        vector <int> cost;
-        vector <int> nextHop;
-        vector <int> neighbors;
+    vector <int> destination;
+    vector <int> cost;
+    vector <int> nextHop;
+    vector <int> neighbors;
 
-        struct node* link;
-    };
+    struct node* link;
+
+    struct packet* recieved;
+    struct packet* send;
+
+};
+
+struct packet{
+
+    int srcNode;
+    int destNode;
+
+    vector <int> destination;
+    vector <int> cost;
+
+    struct packet* next;
+    
+};
 
 
 ///global variables
@@ -37,6 +53,67 @@ int main(int argc, char *argv[]){
 
     string fn = argv[1];
     createTable(fn);
+
+    node* temp = nHead;
+    int packetCount = 0;
+    
+
+    while(temp != NULL){
+
+        for(int i=0; i<temp->neighbors.size(); i++){
+            
+            
+            packet* tempPack = new packet;
+            tempPack->srcNode = temp->id;
+            tempPack->destNode = temp->neighbors.at(i);
+            tempPack->next = NULL;
+
+
+            for(int j=0; j<temp->cost.size(); j++){
+                tempPack->destination.push_back(temp->destination.at(j));
+                tempPack->cost.push_back(temp->cost.at(j));
+            }
+
+            if(temp->send == NULL){
+                temp->send = tempPack;
+            }
+            else{
+                packet* s = new packet;
+                s = temp->send;
+                while(s->next !=NULL){
+                    s=s->next;
+                }
+                s->next = tempPack;
+            }
+            packetCount++;
+        }
+        temp = temp->link;
+    }
+
+    
+
+    cout << "packetCount: " << packetCount << endl; 
+    cout << endl << "----------------------------------------------------------" << endl << endl;
+    
+
+
+/*
+    node* nuTemp = nHead;
+        while(nuTemp != NULL){
+            if(nuTemp->id == temp->neighbors.at(i)){
+                nuTemp->recieved = tempPack;
+                cout << "found : " << nuTemp->id << endl;
+            }
+            nuTemp = nuTemp->link;
+        }
+*/
+
+
+
+
+
+
+
 
     viewTopogrophy();
 
@@ -64,15 +141,26 @@ void viewTopogrophy(){
     nodeToFind = largestNode;
     for(int x=0; x <= largestNode; x++){
         temp = nHead;
+        int sending =0;
+        
         while(temp->id != nodeToFind){
             temp=temp->link;
         }
+
+        packet* s = new packet;
+        s=temp->send;
+        while(s != NULL){
+            s=s->next;
+            sending++;
+        }
+
         cout << "Node #" << temp->id<< endl;
         cout << "< destination, cost, nexthop > " << endl;
         for(int i=0; i<temp->destination.size(); i++){
             cout << "<" << temp->destination.at(i) << ", " << temp->cost.at(i) << ", "<< temp->nextHop.at(i) << ">" << endl;
         }
         cout << "size: " << temp->destination.size() << endl;
+        cout << "sending: " << sending << endl;
 
         cout << "Neighbors: <";
         for(int i=0; i<temp->neighbors.size(); i++){
