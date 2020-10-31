@@ -140,7 +140,9 @@ void viewTopogrophy(){
     cout << "Total rounds: " << rounds << endl;
     cout << "packetsCreated: " << packetCreated << endl; 
     //cout << "packetRecieved: " << packetRecieved << endl;
-    cout << "lastNodeUpdated: " << lastNodeUpdated << endl;
+    cout << "lastNodeUpdated: " << lastNodeUpdated << endl << endl;
+
+    packetRoute();
 
     cout << endl << "---------------------------------------------------" << endl;
 
@@ -483,6 +485,7 @@ void packetRoute(){
             temp = temp->link;
         }   
     }
+    cout << "Path from node 0 to node " << nodeToFind << ": " << endl; 
     cout << "< ";
     for(int k =0; k<route.size(); k++){
         cout << route.at(k) << ", ";

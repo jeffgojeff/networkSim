@@ -51,4 +51,8 @@ Total rounds: 1
 packetsCreated: 28
 lastNodeUpdated: 0
 
+Node to find: 3
+Path from node 0 to node 3: 
+< 0, 1, 3, >
+
 ---------------------------------------------------

@@ -1026,4 +1026,8 @@ Total rounds: 5
 packetsCreated: 720
 lastNodeUpdated: 0
 
+Node to find: 23
+Path from node 0 to node 23: 
+< 0, 22, 8, 23, >
+
 ---------------------------------------------------
