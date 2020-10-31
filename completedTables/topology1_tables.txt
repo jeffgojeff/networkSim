@@ -1,0 +1,54 @@
+Node #4
+< destination, cost, nexthop > 
+<1, 220, 3>
+<2, 669, 2>
+<3, 196, 3>
+<0, 960, 2>
+size: 4
+Neighbors: <1, 2, 3, >
+
+Node #3
+< destination, cost, nexthop > 
+<2, 722, 2>
+<4, 196, 4>
+<1, 24, 1>
+<0, 931, 1>
+size: 4
+Neighbors: <2, 4, 1, >
+
+Node #2
+< destination, cost, nexthop > 
+<4, 669, 4>
+<3, 722, 3>
+<0, 291, 0>
+<1, 746, 3>
+size: 4
+Neighbors: <4, 3, 0, >
+
+Node #1
+< destination, cost, nexthop > 
+<4, 220, 3>
+<0, 907, 0>
+<3, 24, 3>
+<2, 746, 3>
+size: 4
+Neighbors: <4, 0, 3, >
+
+Node #0
+< destination, cost, nexthop > 
+<1, 907, 1>
+<2, 291, 2>
+<4, 960, 2>
+<3, 931, 1>
+size: 4
+Neighbors: <1, 2, >
+
+
+---------------------------------------------------
+
+Total Nodes: 5
+Total rounds: 1
+packetsCreated: 28
+lastNodeUpdated: 0
+
+---------------------------------------------------

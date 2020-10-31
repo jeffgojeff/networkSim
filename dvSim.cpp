@@ -1,3 +1,7 @@
+//Mina Guirguis CS4310
+//Project 1 Distance Vector Simulator
+//Author Jeffrey C. Slocum
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -16,7 +20,6 @@ struct node{
     vector <int> neighbors;
 
     struct node* link;
-
     struct packet* recieved;
     struct packet* send;
 
@@ -26,10 +29,8 @@ struct packet{
 
     int srcNode;
     int destNode;
-
     vector <int> destination;
     vector <int> cost;
-
     struct packet* next;
     
 };
@@ -38,6 +39,10 @@ struct packet{
 ///global variables
 struct node *nHead;
 int packetRecieved, packetCreated = 0;
+int lastNodeUpdated = -1;
+bool tableUpdated = true;
+int rounds = 0;
+string fn;
 
 
 ///function headers
@@ -48,46 +53,32 @@ void createNode(int, int, int);
 void createDV();
 void sendDV();
 void addMissingNodes(struct node*);
+void updateNodes(struct node*);
 void initialNeighborUpdate(int, int, int);
 void whatsInR();
 void whatsInS();
 void updateTables();
-void clearSend();
+void packetRoute();
 bool findNode(int);
-int getCost(int, int);
-
+int findCost(struct node*, struct packet*);
 
 
 int main(int argc, char *argv[]){
 
-    string fn = argv[1];
+    fn = argv[1];
+
     createTable(fn);
 
-    createDV();
-    sendDV();
-    viewTopogrophy();
-    updateTables();
-    viewTopogrophy();
+    while(tableUpdated){
+        createDV();
+        sendDV();
+        updateTables();
+        if(tableUpdated)
+            rounds++;
+    };
 
-    cout << endl << "SECOND TRY" << endl;
-    createDV();
-    sendDV();
-    updateTables();
     viewTopogrophy();
-    
-    /*
-    cout << endl << "THIRD TRY" << endl;
-    createDV();
-    sendDV();
-    updateTables();
-    viewTopogrophy();
-    */
-    
-    
-
 }
-
-
 
 void viewTopogrophy(){
     int total =0;
@@ -112,13 +103,11 @@ void viewTopogrophy(){
             temp=temp->link;
         }
 
-
         packet* s = new packet;
         s=temp->send;
         while(s != NULL){
             sending++;
             s=s->next;
-            
         }
 
         packet* r = new packet;
@@ -126,10 +115,7 @@ void viewTopogrophy(){
         while(r != NULL){
             recieving++;
             r=r->next;
-            
         }
-
-
 
         cout << "Node #" << temp->id<< endl;
         cout << "< destination, cost, nexthop > " << endl;
@@ -137,8 +123,8 @@ void viewTopogrophy(){
             cout << "<" << temp->destination.at(i) << ", " << temp->cost.at(i) << ", "<< temp->nextHop.at(i) << ">" << endl;
         }
         cout << "size: " << temp->destination.size() << endl;
-        cout << "sending: " << sending << endl;
-        cout << "recieving: " << recieving << endl;
+        //cout << "sending: " << sending << endl;
+        //cout << "recieving: " << recieving << endl;
 
         cout << "Neighbors: <";
         for(int i=0; i<temp->neighbors.size(); i++){
@@ -150,11 +136,13 @@ void viewTopogrophy(){
     }
 
     cout << endl << "---------------------------------------------------" << endl;
-    cout << endl  << "Total Nodes: " << total << endl;
+    cout << endl << "Total Nodes: " << total << endl;
+    cout << "Total rounds: " << rounds << endl;
     cout << "packetsCreated: " << packetCreated << endl; 
-    cout << "packetRecieved: " << packetRecieved << endl;
-    cout << endl << "---------------------------------------------------" << endl;
+    //cout << "packetRecieved: " << packetRecieved << endl;
+    cout << "lastNodeUpdated: " << lastNodeUpdated << endl;
 
+    cout << endl << "---------------------------------------------------" << endl;
 
 }
 
@@ -256,7 +244,6 @@ void initialNeighborUpdate(int i, int j, int k){
 void createDV(){
     node* temp = nHead;
     
-
     while(temp != NULL){
 
         for(int i=0; i<temp->neighbors.size(); i++){
@@ -289,17 +276,13 @@ void createDV(){
 }
 
 
-
 void sendDV(){
 
     node* temp = nHead;
-
     while(temp != NULL){
-
         packet* sHead = temp->send;
         while(sHead != NULL){
             node* find = nHead;
-
             while(find->id != sHead->destNode){
                 find = find->link;
             }
@@ -314,7 +297,6 @@ void sendDV(){
             else{
                 
                 s = find->recieved;
-
                 while(s->next != NULL){
                     s=s->next;   
                 }
@@ -327,7 +309,6 @@ void sendDV(){
         }
         temp->send=NULL;
         temp= temp->link;
-        
     }
 }
 
@@ -336,13 +317,13 @@ void updateTables(){
     node* temp = nHead;
     while(temp != NULL){
 
+        tableUpdated = false;
         addMissingNodes(temp);
-
+        updateNodes(temp);
         temp->recieved=NULL;
         temp=temp->link;
     }
 }
-
 
 void addMissingNodes(node *temp){
     packet* sHead = temp->recieved;
@@ -357,9 +338,15 @@ void addMissingNodes(node *temp){
                 //and is not itself
                 //add it to the table
                 if(!(find(temp->destination.begin(), temp->destination.end(), sHead->destination.at(i)) != temp->destination.end()) && temp->id != sHead->destination.at(i)){
+
+                    int cost = 0;
+                    cost = findCost(temp, sHead);
+
                     temp->destination.push_back(sHead->destination.at(i));
-                    temp->cost.push_back(sHead->cost.at(i));
+                    temp->cost.push_back(sHead->cost.at(i) + cost);
                     temp->nextHop.push_back(sHead->srcNode);
+                    tableUpdated = true;
+                    lastNodeUpdated = temp->id;
                 }
             }         
         }
@@ -367,103 +354,140 @@ void addMissingNodes(node *temp){
     }
 }
 
+void updateNodes(node *temp){
 
-int getCost(int nodeId, int destId){
-    node* temp = nHead;
-    int cost = 0;
-    while(temp->id != nodeId){
-        temp = temp->link;
-    }
+    packet* pack = temp->recieved;
+    while(pack != NULL){
+        //loop through vectors in sent packets
+        for(int i=0; i<pack->destination.size(); i++){
+            //loop through the table
+            for(int j=0; j<temp->destination.size(); j++){
+                if(pack->destination.at(i) == temp->destination.at(j)){
 
-    for(int i=0; i<temp->destination.size(); i++){
-        cost=0;
-        if(temp->destination.at(i) == destId){
-            cost = temp->cost.at(i);
-            cout << "cost: " << cost << endl;
-            return cost;
+                    int cost = 0;
+                    cost = findCost(temp, pack);
+
+                    /*
+                    cout << "node #" << temp->id << endl;
+                    cout << "from: " << pack->srcNode << endl;
+                    cout << "dest: " << pack->destination.at(i) << " & " << temp->destination.at(j) << endl;
+                    cout << "current cost: " << temp->cost.at(j) << endl;
+                    cout << "cost to src: " << cost << endl;
+                    cout << "total cost: " << temp->cost.at(j) + cost << endl << endl;
+                    */
+
+                    if((pack->cost.at(i) + cost) < temp->cost.at(j)){
+                        temp->cost.at(j) = pack->cost.at(i) + cost;
+                        temp->nextHop.at(j) = pack->srcNode;
+                        tableUpdated = true;
+                        lastNodeUpdated = temp->id;
+                    }
+                }
+            }
         }
+        pack=pack->next;
     }
-
-return cost;
-
 }
 
 
-
-
 void whatsInR(){
-
     node* temp = nHead;
-
     cout << endl << endl <<  "whats in R" << endl;
     while(temp != NULL){
-
         cout << "Node #" << temp->id << endl;
         cout << "< source, destination > " << endl;
-
         packet* r = new packet;
         r=temp->recieved;
         while(r != NULL){
-
-
             cout << "<" << r->srcNode << ", " << r->destNode << ">" << endl;
             for(int i=0; i<r->destination.size(); i++){
                 cout << "desination: " << r->destination.at(i) << "  cost: " << r->cost.at(i) << endl;
             }
             r=r->next;
         }
-
         temp=temp->link;
     }
-
-
-
 }
 
 
-
 void whatsInS(){
-
     node* temp = nHead;
     cout << endl << endl << "whats in S" << endl;
     while(temp != NULL){
-        
+
         cout << "Node #" << temp->id << endl;
         cout << "< source, destination > " << endl;
 
         packet* r = new packet;
         r=temp->send;
         while(r != NULL){
-
-
             cout << "<" << r->srcNode << ", " << r->destNode << ">" << endl;
             r=r->next;
         }
-
         temp=temp->link;
     }
-
 }
 
 
-void clearSend(){
-    node* temp= nHead;
-    
-
-    while(temp != NULL){
-        packet* clear = temp->send;
-        packet* tempClear = new packet;
-
-        while(clear != NULL){
-            //cout << "not clear" << endl;
-        
-            tempClear = clear;
-            clear = clear->next;
-
-            delete tempClear;
+int findCost(node *temp, packet *sHead){
+    node* findCost = temp;
+    int cost = 0;
+    for(int k=0; k<findCost->destination.size(); k++){
+        if(findCost->destination.at(k) == sHead->srcNode){
+            cost = findCost->cost.at(k);
         }
-
-    temp = temp->link;
     }
+return cost;
+}
+
+
+void packetRoute(){
+    node* temp = nHead;
+    int bigNode, nodeToFind = 0;
+    while(temp != NULL){
+
+        if(temp->id > bigNode){
+            bigNode = temp->id;
+        }
+        temp = temp->link;
+    }
+
+    if(bigNode<7)
+        nodeToFind = 3;
+    else if(bigNode<23)
+        nodeToFind = 7;
+    else
+        nodeToFind = 23;
+
+    temp = nHead;
+    while(temp->id != 0){
+        temp = temp->link;
+    }
+    cout << "Node to find: " << nodeToFind << endl;
+
+    vector <int> route;
+    route.push_back(0);
+    int currentNode = 0;
+    int nextHop = 0;
+    while(temp->id != nodeToFind){
+        for(int i=0; i<temp->destination.size(); i++){
+            if(temp->destination.at(i) == nodeToFind){
+                route.push_back(temp->nextHop.at(i));
+                currentNode=temp->id;
+                nextHop = temp->nextHop.at(i);
+                break;
+            }
+        }
+        temp = nHead;
+        while(temp->id != nextHop){
+            temp = temp->link;
+        }   
+    }
+    cout << "< ";
+    for(int k =0; k<route.size(); k++){
+        cout << route.at(k) << ", ";
+    }
+    cout << ">" << endl;
+
 
 }
